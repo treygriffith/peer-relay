@@ -1,6 +1,7 @@
 var assert = require('assert')
 var Client = require('./lib/client')
 var wrtc = require('electron-webrtc')()
+var crypto = require('crypto')
 
 wrtc.on('error', function (err) { console.error(err, err.stack) })
 
@@ -150,6 +151,19 @@ describe('End to End', function () {
       assert.equal(msg, 'TEST')
       assert.ok(c1PeerEvent)
       assert.ok(c3PeerEvent)
+      done()
+    })
+  })
+
+  it('deterministic id', function (done) {
+    var id = crypto.randomBytes(20)
+    var c1 = startClient({ id: id, port: 8001, bootstrap: [] })
+    assert.ok(id.equals(c1.id))
+
+    var c2 = startClient({ port: 8002, bootstrap: ['ws://localhost:8001'] })
+
+    c2.on('peer', function (c2id) {
+      assert.ok(id.equals(c2id))
       done()
     })
   })
