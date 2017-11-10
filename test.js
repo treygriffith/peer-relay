@@ -2,6 +2,9 @@ var assert = require('assert')
 var Client = require('./lib/client')
 var wrtc = require('electron-webrtc')()
 var crypto = require('crypto')
+var http = require('http')
+var https = require('https')
+var fixtures = require('./fixtures')
 
 wrtc.on('error', function (err) { console.error(err, err.stack) })
 
@@ -178,6 +181,58 @@ describe('End to End', function () {
     c2.on('peer', function (c1id) {
       assert.ok(c1.id.equals(c1id))
       done()
+    })
+  })
+
+  it('allows custom servers', function (done) {
+    var server = http.createServer(function (req, res) {
+      var body = http.STATUS_CODES[426]
+
+      res.writeHead(426, {
+        'Content-Length': body.length,
+        'Content-Type': 'text/plain'
+      })
+      res.end(body)
+    })
+    server.allowHalfOpen = false
+    server.listen(8001, function () {
+      var c1 = startClient({ server: server })
+
+      var c2 = startClient({ port: 8002, bootstrap: ['ws://localhost:8001'] })
+
+      c2.on('peer', function (c1id) {
+        assert.ok(c1.id.equals(c1id))
+        done()
+      })
+    })
+  })
+
+  it('allows wss:// urls', function (done) {
+    var server = https.createServer({
+      key: fixtures.key,
+      cert: fixtures.cert
+    }, function (req, res) {
+      var body = http.STATUS_CODES[426]
+
+      res.writeHead(426, {
+        'Content-Length': body.length,
+        'Content-Type': 'text/plain'
+      })
+      res.end(body)
+    })
+    server.allowHalfOpen = false
+    server.listen(8443, function () {
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0
+
+      var c1 = startClient({ server: server })
+
+      var c2 = startClient({ port: 8002, bootstrap: ['wss://localhost:8443'] })
+
+      c2.on('peer', function (c1id) {
+        assert.ok(c1.id.equals(c1id))
+        done()
+        delete process.env.NODE_TLS_REJECT_UNAUTHORIZED
+      })
     })
   })
 
