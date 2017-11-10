@@ -168,6 +168,19 @@ describe('End to End', function () {
     })
   })
 
+  it('allows a custom hostname', function (done) {
+    // set localtest to 127.0.0.1 in /etc/hosts
+    var c1 = startClient({ port: 8001, host: 'localtest', bootstrap: [] })
+    assert.equal(c1.wsConnector.url, 'ws://localtest:8001')
+
+    var c2 = startClient({ port: 8002, bootstrap: ['ws://localtest:8001'] })
+
+    c2.on('peer', function (c1id) {
+      assert.ok(c1.id.equals(c1id))
+      done()
+    })
+  })
+
   // it('webrtc connect and send message', function (done) {
   //   // c1 <-> c2 <-> c3
   //   var c2 = startClient({ port: 8002, bootstrap: [] })
